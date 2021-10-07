@@ -133,6 +133,32 @@ function Test-PendingReboot
 
     process
     {
+        # Simple hack - map invoke-wmi to invoke-CIM
+        function Invoke-WmiMethod([string] $Namespace, [string] $Class, [string] $Name, [string] $ComputerName, [string] $ErrorAction, [object[]] $ArgumentList)
+        {
+            Write-Verbose "Invoke-WmiMethod $($Class) :: $($Name)"
+
+            $arguments = @{};
+            if (($Class -eq 'StdRegProv') -and ($Name -eq 'EnumKey')) {
+                $arguments = @{sSubKeyName = $ArgumentList[1]};
+            }
+
+            elseif (($Class -eq 'StdRegProv') -and ($Name -eq 'GetMultiStringValue')) {
+                $arguments = @{sSubKeyName = $ArgumentList[1]; sValueName = $ArgumentList[2]}
+            }
+
+            elseif (($Class -eq 'CCM_ClientUtilities') -and ($Name -eq 'DetermineIfRebootPending')) {
+                # no input arguments
+            }
+            else {
+                Write-Host "!! Unknown command to translate";
+                Throw "Unknown command to translate";
+            }
+
+            $res = Invoke-CimMethod -Namespace $Namespace -ClassName $Class -MethodName $Name -Arguments $arguments -ErrorAction $ErrorAction
+            return $res
+        }
+
         foreach ($computer in $ComputerName)
         {
             try
