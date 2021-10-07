@@ -21,7 +21,7 @@
     PowerShellVersion = '4.0'
 
     # Functions to export from this module
-    FunctionsToExport = @()
+    FunctionsToExport = @('Test-PendingReboot')
 
     # Cmdlets to export from this module
     CmdletsToExport = @()
