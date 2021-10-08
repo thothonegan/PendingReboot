@@ -147,15 +147,24 @@ function Test-PendingReboot
                 $arguments = @{sSubKeyName = $ArgumentList[1]; sValueName = $ArgumentList[2]}
             }
 
+            elseif (($Class -eq 'StdRegProv') -and ($Name -eq 'GetStringValue')) {
+                $arguments = @{sSubKeyName = $ArgumentList[1]; sValueName = $ArgumentList[2]}
+            }
+
             elseif (($Class -eq 'CCM_ClientUtilities') -and ($Name -eq 'DetermineIfRebootPending')) {
                 # no input arguments
             }
             else {
-                Write-Host "!! Unknown command to translate";
+                Write-Host "!! Unknown command to translate: $($Name)";
                 Throw "Unknown command to translate";
             }
 
             $res = Invoke-CimMethod -Namespace $Namespace -ClassName $Class -MethodName $Name -Arguments $arguments -ErrorAction $ErrorAction
+
+            if (($Class -eq 'StdRegProv') -and ($Name -eq 'GetStringValue')) {
+                return $res.sValue;
+            }
+
             return $res
         }
 
@@ -192,7 +201,7 @@ function Test-PendingReboot
                 $pendingDomainJoin = ($registryNetlogon -contains 'JoinDomain') -or ($registryNetlogon -contains 'AvoidSpnSet')
 
                 ## Query ComputerName and ActiveComputerName from the registry and setting the MethodName to GetMultiStringValue
-                $invokeWmiMethodParameters.Name = 'GetMultiStringValue'
+                $invokeWmiMethodParameters.Name = 'GetStringValue'
                 $invokeWmiMethodParameters.ArgumentList = @($hklm, 'SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName\', 'ComputerName')
                 $registryActiveComputerName = Invoke-WmiMethod @invokeWmiMethodParameters
 
@@ -242,6 +251,7 @@ function Test-PendingReboot
                         ComputerName                     = $computer
                         ComponentBasedServicing          = $registryComponentBasedServicing
                         PendingComputerRenameDomainJoin  = $pendingComputerRename
+                        PendingDomainJoin                = $pendingDomainJoin
                         PendingFileRenameOperations      = $registryPendingFileRenameOperationsBool
                         PendingFileRenameOperationsValue = $registryPendingFileRenameOperations
                         SystemCenterConfigManager        = $systemCenterConfigManager
